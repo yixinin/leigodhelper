@@ -12,6 +12,6 @@ func notify(msg string) {
 	}
 	err := notification.Push()
 	if err != nil {
-		Logger.Fatalln(err)
+		Logger.Println(err)
 	}
 }
