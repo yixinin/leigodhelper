@@ -1,10 +1,10 @@
-package main
+package helper
 
 import (
 	"github.com/go-toast/toast"
 )
 
-func notify(msg string) {
+func Notify(msg string) {
 	notification := toast.Notification{
 		AppID:   "Microsoft.Windows.Shell.RunDialog",
 		Title:   "加速器助手",

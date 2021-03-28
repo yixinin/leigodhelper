@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type Config struct {
 
 var config Config
 
-func loadConfig() error {
+func LoadConfig() error {
 	viper.SetConfigName("config")
 	viper.SetConfigType("toml")
 	viper.AddConfigPath(".")
@@ -33,6 +33,10 @@ func loadConfig() error {
 	err = viper.Unmarshal(&config)
 	if err != nil {
 		return err
+	}
+
+	if config.Username == "" || config.Password == "" {
+		return fmt.Errorf("雷神加速器助手已退出，请正确填写雷神加速器账号密码后重启")
 	}
 
 	// if _, ok := config.StartWith["steam"]; !ok {
@@ -55,14 +59,15 @@ func loadConfig() error {
 var Logger *log.Logger
 
 func init() {
-	cmd := exec.Command("powershell", "rm", "leigodhelper.log.*")
+	cmd := exec.Command("powershell", "rm", "logs/leigodhelper.log.*")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
 	}
-	os.Rename("leigodhelper.log", fmt.Sprintf("leigodhelper.log.%s", time.Now().Format("0102150405")))
-	f, err := os.Create("leigodhelper.log")
+	os.Rename("logs/leigodhelper.log", fmt.Sprintf("logs/leigodhelper.log.%s", time.Now().Format("0102150405")))
+	os.Mkdir("logs", os.ModeDir)
+	f, err := os.Create("logs/leigodhelper.log")
 	if err != nil {
 		log.Println(err)
 		return

@@ -1,4 +1,4 @@
-package main
+package helper
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ func (t *LeigodToken) IsValid() bool {
 
 var Token *LeigodToken
 
-var filename = "token.cache"
+var filename = "cache/token.cache"
 
 func SaveToken() {
 	buf, err := json.Marshal(Token)
@@ -29,6 +29,7 @@ func SaveToken() {
 		Logger.Println(err)
 		return
 	}
+	os.Mkdir("cache", os.ModeDir)
 	err = os.WriteFile(filename, buf, fs.ModePerm)
 	if err != nil {
 		Logger.Println(err)
@@ -39,13 +40,6 @@ func LoadToken() {
 	if Token == nil {
 		Token = new(LeigodToken)
 	}
-	buf, err := os.ReadFile(filename)
-	if err != nil {
-		Logger.Println(err)
-		return
-	}
-	err = json.Unmarshal(buf, Token)
-	if err != nil {
-		Logger.Println(err)
-	}
+	buf, _ := os.ReadFile(filename)
+	json.Unmarshal(buf, Token)
 }
