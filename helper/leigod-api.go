@@ -125,7 +125,7 @@ func IsPause(accountToken string) (bool, error) {
 		return false, err
 	}
 	if ack.Code != 0 {
-		return false, fmt.Errorf("code:%d, msg:%s, data:%+v", ack.Code, ack.Message, ack.Data)
+		return false, fmt.Errorf("code:%d, msg:%s", ack.Code, ack.Message)
 	}
 	return ack.Data.PauseStatusId != 0, nil
 }
@@ -161,7 +161,7 @@ func leigodHttpPost(url string, req, ackBody interface{}) error {
 		return err
 	}
 	Logger.Printf("http post: url=%s, req=%s, ack=%+v \n", url, string(reqBuf), ack)
-	return nil
+	return fmt.Errorf("code:%d, msg:%s", ack.Code, ack.Message)
 }
 
 func setHeader(r *http.Request) {

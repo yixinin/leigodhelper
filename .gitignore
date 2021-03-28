@@ -1,3 +1,5 @@
 leigodhelper.exe*
-leigodhelper.log*
-token.cache
+logs
+cache
+*debug*
+.vscode
