@@ -1,0 +1,7 @@
+leigodhelper.exe*
+logs
+cache
+*debug*
+.vscode
+leigodhelper.zip
+local.toml
