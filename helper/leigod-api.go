@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,10 +13,13 @@ import (
 )
 
 const (
-	TimeLayout = "2006-01-02 15:04:05"
+	CodeNotLogin = 400006
+	TimeLayout   = "2006-01-02 15:04:05"
 
 	UserAgent = "Mozilla/5.0 (Linux; Android 9; MIX 2 Build/PKQ1.190118.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 MQQBrowser/6.2 TBS/045521 Mobile Safari/537.36 MMWEBID/2679 MicroMessenger/8.0.1.1841(0x2800015D) Process/tools WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64"
 )
+
+var ErrorNotLogin = errors.New("not login")
 
 type Ack struct {
 	Code    int         `json:"code"`
@@ -159,6 +163,9 @@ func leigodHttpPost(url string, req, ackBody interface{}) error {
 		err = json.Unmarshal(buf, ackBody)
 		Logger.Printf("http post: url=%s, req=%s, ack=%+v \n", url, string(reqBuf), ackBody)
 		return err
+	}
+	if ack.Code == CodeNotLogin {
+		return ErrorNotLogin
 	}
 	Logger.Printf("http post: url=%s, req=%s, ack=%+v \n", url, string(reqBuf), ack)
 	return fmt.Errorf("code:%d, msg:%s", ack.Code, ack.Message)

@@ -148,32 +148,50 @@ func hasGameRunning() (leigodOK, gameOK bool) {
 func tryPauseLeigod() error {
 	lastTryPauseTime = time.Now().Unix()
 	if !Token.IsValid() {
-		token, expire, err := Login(config.Username, config.Password)
-		if err != nil {
-			return err
-		}
-		if token == "" || expire.Before(time.Now()) {
-			return fmt.Errorf("雷神账号登录失败")
-		}
-		Token = &LeigodToken{
-			AccountToken: token,
-			ExpireTime:   expire,
-		}
-		SaveToken()
+
 	}
 	// 获取暂停状态
 	paused, err := IsPause(Token.AccountToken)
-	if err != nil {
-		return err
-	}
-	if !paused {
-		err := Pause(Token.AccountToken)
+	if err == ErrorNotLogin {
+		if err := Relogin(); err != nil {
+			return err
+		}
+	} else {
 		if err != nil {
 			return err
 		}
+	}
+	if !paused {
+		err := Pause(Token.AccountToken)
+		if err == ErrorNotLogin {
+			if err := Relogin(); err != nil {
+				return err
+			}
+		} else {
+			if err != nil {
+				return err
+			}
+		}
+
 		Notify("雷神加速器助手检测到当前没有游戏运行，已暂停时长。")
 		return nil
 	}
 	Logger.Println("已是暂停状态，无需暂停")
+	return nil
+}
+
+func Relogin() error {
+	token, expire, err := Login(config.Username, config.Password)
+	if err != nil {
+		return err
+	}
+	if token == "" || expire.Before(time.Now()) {
+		return fmt.Errorf("雷神账号登录失败")
+	}
+	Token = &LeigodToken{
+		AccountToken: token,
+		ExpireTime:   expire,
+	}
+	SaveToken()
 	return nil
 }
