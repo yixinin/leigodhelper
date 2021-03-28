@@ -42,12 +42,13 @@ func run() {
 	if newStarted { // 刚打开雷神加速器 不检测暂停
 		lastTryPauseTime = time.Now().Unix()
 	}
-	Logger.Println("waitStart", time.Now())
+
 	cancelWait()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	Logger.Println("start check", time.Now())
 	go check(ctx, exitCh)
 
 	for {
