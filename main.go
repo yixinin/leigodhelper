@@ -30,7 +30,7 @@ func run() {
 	signal.Notify(sysCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
 
 	// 启动加速器和steam
-	ctx, cancelWait := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancelWait := context.WithTimeout(context.Background(), 60*time.Second)
 
 	newStarted := waitStart(ctx)
 	if newStarted { // 刚打开雷神加速器 不检测暂停
@@ -47,11 +47,10 @@ func run() {
 		select {
 		case <-sysCh:
 			tryPauseLeigod()
+			Logger.Printf("加速器助手已被强制退出")
 			return
 		case msg := <-exitCh:
-			if msg != "" {
-				Logger.Println(msg)
-			}
+			Logger.Printf("加速器助手已退出, msg: %s", msg)
 			tryPauseLeigod()
 			return
 		}
@@ -67,7 +66,7 @@ func waitStart(ctx context.Context) bool {
 	for {
 		select {
 		case <-ctx.Done(): //超时退出
-			return false
+			return tryRun
 		default:
 		}
 		var apps = make([]string, 0, len(config.StartWith))
@@ -92,7 +91,8 @@ func waitStart(ctx context.Context) bool {
 
 		if !tryRun {
 			tryRun = true
-			if runApps(apps...) != nil {
+			if err := runApps(apps...); err != nil {
+				Logger.Println(err)
 				return false
 			}
 		}
@@ -121,6 +121,7 @@ func check(ctx context.Context, exitCh chan string) {
 		}
 
 		if !gameOK && time.Now().Unix()-lastTryPauseTime > 60*60 { // 如果近期检测过 不再频繁检测
+			Logger.Printf("lastTryPauseTime:%d\n", lastTryPauseTime)
 			if err := tryPauseLeigod(); err != nil {
 				notify("加速器助手已退出：" + err.Error())
 				exitCh <- ""
@@ -170,6 +171,7 @@ func tryPauseLeigod() error {
 			return err
 		}
 		notify("雷神加速器助手检测到当前没有游戏运行，已暂停时长。")
+		return nil
 	}
 	Logger.Println("已是暂停状态，无需暂停")
 	return nil
