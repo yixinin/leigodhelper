@@ -1,9 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -51,7 +55,13 @@ func loadConfig() error {
 var Logger *log.Logger
 
 func init() {
-	os.Remove("leigodhelper.log")
+	cmd := exec.Command("powershell", "rm", "leigodhelper.log.*")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	err := cmd.Run()
+	if err != nil {
+		log.Println(err)
+	}
+	os.Rename("leigodhelper.log", fmt.Sprintf("leigodhelper.log.%s", time.Now().Format("0102150405")))
 	f, err := os.Create("leigodhelper.log")
 	if err != nil {
 		log.Println(err)

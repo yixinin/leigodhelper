@@ -17,6 +17,12 @@ var (
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			notify(fmt.Sprintf("系统错误，关闭助手, main\nerr: %+v", r))
+		}
+		Logger.Println("defer main")
+	}()
 	if err := loadConfig(); err != nil {
 		notify(err.Error())
 	}
@@ -36,6 +42,7 @@ func run() {
 	if newStarted { // 刚打开雷神加速器 不检测暂停
 		lastTryPauseTime = time.Now().Unix()
 	}
+	Logger.Println("waitStart", time.Now())
 	cancelWait()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -72,6 +79,7 @@ func waitStart(ctx context.Context) bool {
 		var apps = make([]string, 0, len(config.StartWith))
 		// 尝试启动雷神加速器和steam
 		var pMap = getProcess()
+
 		// 检测加速器是否运行中
 		for pName, started := range startMap {
 			if started {
@@ -83,7 +91,6 @@ func waitStart(ctx context.Context) bool {
 				apps = append(apps, config.StartWith[pName])
 			}
 		}
-
 		// 已启动
 		if len(apps) == 0 {
 			return tryRun
@@ -102,9 +109,13 @@ func waitStart(ctx context.Context) bool {
 
 func check(ctx context.Context, exitCh chan string) {
 	defer func() {
-		exitCh <- fmt.Sprintf("系统错误，关闭助手\n err: %+v", recover())
+		if r := recover(); r != nil {
+			exitCh <- fmt.Sprintf("系统错误，关闭助手\n err: %+v", recover())
+		}
+		Logger.Println("defer check")
 	}()
 	for {
+
 		select {
 		case <-ctx.Done():
 			return
@@ -117,6 +128,7 @@ func check(ctx context.Context, exitCh chan string) {
 
 		if gameOK { // 启动游戏时 重置检测状态
 			lastTryPauseTime = -1
+			time.Sleep(5 * time.Second)
 			continue
 		}
 
@@ -128,7 +140,7 @@ func check(ctx context.Context, exitCh chan string) {
 				return
 			}
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }
 

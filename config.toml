@@ -3,4 +3,4 @@ password = "" # 雷神加速器密码
 games = "TslGame,SoTGame" ## 绝地求生，盗贼之海 进程名 不需要.exe
 [start_with] # 需要启动的应用程序  不需要可不填
     steam = "C:\\Program Files (x86)\\Steam\\steam.exe" # steam 启动路径
-    leogod = "C:\\Program Files (x86)\\LeiGod_Acc\\leigod.exe" # 雷神加速器启动路径
+    leigod = "C:\\Program Files (x86)\\LeiGod_Acc\\leigod.exe" # 雷神加速器启动路径
