@@ -33,7 +33,7 @@ func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	Logger.Println("start check", time.Now())
+	Logger.Println("start check")
 	go check(ctx, exitCh)
 
 	for {

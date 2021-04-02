@@ -2,12 +2,7 @@ package helper
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/spf13/viper"
 )
@@ -54,23 +49,4 @@ func LoadConfig() error {
 		watchs[game] = struct{}{}
 	}
 	return nil
-}
-
-var Logger *log.Logger
-
-func init() {
-	cmd := exec.Command("powershell", "rm", "logs/leigodhelper.log.*")
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	err := cmd.Run()
-	if err != nil {
-		log.Println(err)
-	}
-	os.Rename("logs/leigodhelper.log", fmt.Sprintf("logs/leigodhelper.log.%s", time.Now().Format("0102150405")))
-	os.Mkdir("logs", os.ModeDir)
-	f, err := os.Create("logs/leigodhelper.log")
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	Logger = log.New(f, "", log.Llongfile)
 }

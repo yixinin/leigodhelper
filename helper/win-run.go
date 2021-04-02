@@ -3,7 +3,6 @@ package helper
 import (
 	"os/exec"
 	"syscall"
-	"time"
 )
 
 func runApps(apps ...string) error {
@@ -16,7 +15,7 @@ func runApps(apps ...string) error {
 			Logger.Println(err)
 			return err
 		}
-		Logger.Println("start", app, time.Now())
+		Logger.Println("start", app)
 	}
 	return nil
 }
