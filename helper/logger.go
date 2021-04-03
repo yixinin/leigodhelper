@@ -26,6 +26,7 @@ func init() {
 		return
 	}
 	logger := log.New(f, "", log.Llongfile)
+
 	Logger = &Log{
 		logger: logger,
 	}
@@ -36,8 +37,10 @@ type Log struct {
 }
 
 func (l *Log) Println(args ...interface{}) {
-	l.logger.Println(time.Now(), args)
+	args = append([]interface{}{time.Now()}, args...)
+	l.logger.Println(args...)
 }
 func (l *Log) Printf(f string, args ...interface{}) {
-	l.logger.Println("%s "+f, time.Now(), args)
+	args = append([]interface{}{time.Now()}, args...)
+	l.logger.Printf("%s "+f, args...)
 }
