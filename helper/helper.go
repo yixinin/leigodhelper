@@ -145,7 +145,7 @@ func hasGameRunning() (leigodOK, gameOK bool) {
 	return
 }
 
-func tryPauseLeigod() error {
+func tryPauseLeigod(finnal ...bool) error {
 	lastTryPauseTime = time.Now().Unix()
 	if !Token.IsValid() {
 
@@ -156,6 +156,10 @@ func tryPauseLeigod() error {
 		if err := Relogin(); err != nil {
 			return err
 		}
+		if len(finnal) > 0 {
+			return nil
+		}
+		return tryPauseLeigod(true)
 	} else {
 		if err != nil {
 			return err
@@ -167,6 +171,10 @@ func tryPauseLeigod() error {
 			if err := Relogin(); err != nil {
 				return err
 			}
+			if len(finnal) > 0 {
+				return nil
+			}
+			return tryPauseLeigod(true)
 		} else {
 			if err != nil {
 				return err
