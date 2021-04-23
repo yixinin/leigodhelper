@@ -45,9 +45,7 @@ func Run() {
 		case msg := <-exitCh:
 			Logger.Printf("加速器助手已退出, msg: %s", msg)
 			tryPauseLeigod()
-			if config.Exit {
-				return
-			}
+			return
 		}
 	}
 }
@@ -111,7 +109,9 @@ func check(ctx context.Context, exitCh chan string) {
 		}
 		leigodOK, gameOK := hasGameRunning()
 		if !leigodOK {
-			exitCh <- "雷神加速器已退出" // 加速器退出时 助手也退出
+			if config.Exit {
+				exitCh <- "雷神加速器已退出" // 加速器退出时 助手也退出
+			}
 		}
 
 		if gameOK { // 启动游戏时 重置检测状态
