@@ -12,7 +12,6 @@ type Config struct {
 	Password  string            `mapstructure:"password"`
 	Games     string            `mapstructure:"games"`
 	StartWith map[string]string `mapstructure:"start_with"` // 进程名:启动路径
-	Exit      bool              `mapstructure:"exit"`
 }
 
 var config Config
