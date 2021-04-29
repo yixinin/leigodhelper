@@ -100,6 +100,7 @@ func check(ctx context.Context, exitCh chan string) {
 		}
 		Logger.Println("defer check")
 	}()
+	leigodExitTimes := 0
 	for {
 
 		select {
@@ -109,9 +110,12 @@ func check(ctx context.Context, exitCh chan string) {
 		}
 		leigodOK, gameOK := hasGameRunning()
 		if !leigodOK {
-			if config.Exit {
+			if leigodExitTimes > 5 { // 连续监测5次再退出
 				exitCh <- "雷神加速器已退出" // 加速器退出时 助手也退出
 			}
+			leigodExitTimes++
+		} else {
+			leigodExitTimes = 0
 		}
 
 		if gameOK { // 启动游戏时 重置检测状态
