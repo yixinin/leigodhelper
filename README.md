@@ -1,5 +1,10 @@
 ## 雷神加速器自动暂停工具
 
+### 编译
+- 下载并安装Go https://golang.google.cn/dl/go1.16.4.windows-amd64.msi
+- 在powershell中 cd到根目录执行下面两条命令
+- $env:GOPROXY="https://goproxy.cn,direct"
+- go build -ldflags "-H windowsgui"
 
 
 ### 申明
