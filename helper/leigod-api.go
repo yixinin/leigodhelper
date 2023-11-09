@@ -48,26 +48,53 @@ type LoginAck struct {
 	} `json:"data"`
 }
 
-func Login(username, password string) (string, time.Time, error) {
+type LeigodApi struct {
+	username, password string
+	Token              LeigodToken
+}
+
+func NewApi(username, password string) LeigodApi {
+	api := LeigodApi{
+		username: username,
+		password: password,
+	}
+	api.LoadToken()
+	return api
+}
+
+func (a LeigodApi) GetToken() string {
+	if a.Token.ExpireTime.Before(time.Now()) || a.Token.AccountToken == "" {
+		if err := a.Login(); err != nil {
+			Logger.Println(err)
+			return ""
+		}
+	}
+	return a.Token.AccountToken
+}
+
+func (a LeigodApi) Login() error {
 	var url = "https://webapi.nn.com/wap/login/bind"
 	var req = LoginReq{
 		Lang:        "zh_CN",
 		CountryCode: 86,
 		SrcChannel:  "guanwang",
 		UserType:    "0",
-		Username:    username,
-		Password:    MD5(password),
+		Username:    a.username,
+		Password:    MD5(a.password),
 	}
 	var ack LoginAck
-	err := leigodHttpPost(url, req, &ack)
+	err := a.leigodHttpPost(url, req, &ack)
 	if err != nil {
-		return "", time.Now(), err
+		return err
 	}
 	if ack.Code != 0 {
-		return "", time.Now(), fmt.Errorf("%s", ack.Message)
+		return fmt.Errorf("%s", ack.Message)
 	}
 	expireTime, _ := time.ParseInLocation(TimeLayout, ack.Data.LoginInfo.ExpiryTime, time.Local)
-	return ack.Data.LoginInfo.AccountToken, expireTime, nil
+	a.Token.AccountToken = ack.Data.LoginInfo.AccountToken
+	a.Token.ExpireTime = expireTime
+	a.SaveToken()
+	return nil
 }
 
 func MD5(str string) string {
@@ -87,14 +114,14 @@ type PauseAck struct {
 	Message string        `json:"msg"`
 }
 
-func Pause(accountToken string) error {
+func (a LeigodApi) Pause() error {
 	var url = "https://webapi.nn.com/api/user/pause"
 	var req = PauseReq{
 		Lang:         "zh_CN",
-		AccountToken: accountToken,
+		AccountToken: a.GetToken(),
 	}
 	var ack PauseAck
-	err := leigodHttpPost(url, req, &ack)
+	err := a.leigodHttpPost(url, req, &ack)
 	if err != nil {
 		return err
 	}
@@ -117,14 +144,14 @@ type UserInfoAck struct {
 	} `json:"data"`
 }
 
-func IsPause(accountToken string) (bool, error) {
+func (a LeigodApi) IsPause() (bool, error) {
 	var url = "https://webapi.nn.com/api/user/info"
 	var req = UserInfoReq{
 		Lang:         "zh_CN",
-		AccountToken: accountToken,
+		AccountToken: a.GetToken(),
 	}
 	var ack UserInfoAck
-	err := leigodHttpPost(url, req, &ack)
+	err := a.leigodHttpPost(url, req, &ack)
 	if err != nil {
 		return false, err
 	}
@@ -134,7 +161,7 @@ func IsPause(accountToken string) (bool, error) {
 	return ack.Data.PauseStatusId != 0, nil
 }
 
-func leigodHttpPost(url string, req, ackBody interface{}) error {
+func (a LeigodApi) leigodHttpPost(url string, req, ackBody interface{}) error {
 	reqBuf, err := json.Marshal(req)
 	if err != nil {
 		return err
@@ -143,7 +170,7 @@ func leigodHttpPost(url string, req, ackBody interface{}) error {
 	if err != nil {
 		return err
 	}
-	setHeader(r)
+	a.setHeader(r)
 	resp, err := http.DefaultClient.Do(r)
 	if err != nil {
 		return err
@@ -171,7 +198,7 @@ func leigodHttpPost(url string, req, ackBody interface{}) error {
 	return fmt.Errorf("code:%d, msg:%s", ack.Code, ack.Message)
 }
 
-func setHeader(r *http.Request) {
+func (a LeigodApi) setHeader(r *http.Request) {
 	var headers = map[string]string{
 		"Origin":           "https://jiasu.nn.com/",
 		"User-Agent":       UserAgent,

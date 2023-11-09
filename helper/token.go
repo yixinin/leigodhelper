@@ -12,19 +12,12 @@ type LeigodToken struct {
 	ExpireTime   time.Time
 }
 
-func (t *LeigodToken) IsValid() bool {
-	if t == nil {
-		return false
-	}
-	return t.ExpireTime.After(time.Now()) && t.AccountToken != ""
-}
-
 var Token *LeigodToken
 
 var filename = "cache/token.cache"
 
-func SaveToken() {
-	buf, err := json.Marshal(Token)
+func (a LeigodApi) SaveToken() {
+	buf, err := json.Marshal(a.Token)
 	if err != nil {
 		Logger.Println(err)
 		return
@@ -36,10 +29,7 @@ func SaveToken() {
 	}
 }
 
-func LoadToken() {
-	if Token == nil {
-		Token = new(LeigodToken)
-	}
+func (a LeigodApi) LoadToken() {
 	buf, _ := os.ReadFile(filename)
-	json.Unmarshal(buf, Token)
+	json.Unmarshal(buf, &a.Token)
 }

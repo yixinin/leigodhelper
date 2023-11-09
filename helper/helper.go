@@ -3,144 +3,122 @@ package helper
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
+	"strings"
 	"time"
 )
 
 var (
-	watchs           map[string]struct{}
-	leigod           = "leigod"
 	lastTryPauseTime int64
 )
 
-func Run() {
-	var exitCh = make(chan string)
-	sysCh := make(chan os.Signal)
-	signal.Notify(sysCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
+type Helper struct {
+	api     LeigodApi
+	games   map[string]bool
+	timeout time.Duration
 
-	// 启动加速器和steam
-	ctx, cancelWait := context.WithTimeout(context.Background(), 60*time.Second)
+	GameStatus   Status
+	LeigodStatus Status
 
-	newStarted := waitStart(ctx)
-	if newStarted { // 刚打开雷神加速器 不检测暂停
-		lastTryPauseTime = time.Now().Unix()
+	tm *time.Timer
+}
+
+type Status string
+
+const (
+	Stop    Status = "stop"
+	Running Status = "running"
+)
+
+func NewHelper(c *Config) Helper {
+	var games = make(map[string]bool)
+	for _, v := range strings.Split(c.Games, ",") {
+		games[strings.TrimSpace(v)] = true
 	}
 
-	cancelWait()
+	h := Helper{
+		api: LeigodApi{
+			username: c.Username,
+			password: c.Password,
+		},
+		games:   games,
+		timeout: time.Duration(c.Timeout) * time.Second,
+		tm:      time.NewTimer(time.Second),
+	}
+	h.tm.Stop()
+	return h
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func (h Helper) Run(ctx context.Context) {
+	var exitCh = make(chan string)
 	Logger.Println("start check")
-	go check(ctx, exitCh)
+	go h.loop(ctx, exitCh)
 
 	for {
 		select {
-		case <-sysCh:
-			tryPauseLeigod()
+		case <-ctx.Done():
+			h.Pause()
 			Logger.Printf("加速器助手已被强制退出")
 			return
 		case msg := <-exitCh:
 			Logger.Printf("加速器助手已退出, msg: %s", msg)
-			tryPauseLeigod()
+			h.Pause()
 			return
+		case <-h.tm.C:
+			h.Pause()
 		}
 	}
 }
 
-func waitStart(ctx context.Context) bool {
-	var tryRun = false
-	var startMap = make(map[string]bool, len(config.StartWith))
-	for k := range config.StartWith {
-		startMap[k] = false
+func (h *Helper) Update(status Status) {
+	if h.GameStatus == status {
+		return
 	}
-	for {
-		select {
-		case <-ctx.Done(): //超时退出
-			return tryRun
-		default:
-		}
-		var apps = make([]string, 0, len(config.StartWith))
-		// 尝试启动雷神加速器和steam
-		var pMap = getProcess()
-
-		// 检测加速器是否运行中
-		for pName, started := range startMap {
-			if started {
-				continue
-			}
-			if pNum, ok := pMap[pName]; ok && pNum > 0 {
-				startMap[pName] = true
-			} else {
-				apps = append(apps, config.StartWith[pName])
-			}
-		}
-		// 已启动
-		if len(apps) == 0 {
-			return tryRun
+	h.GameStatus = status
+	switch status {
+	case Running:
+		if h.LeigodStatus == Stop {
+			h.tm.Stop()
 		}
 
-		if !tryRun {
-			tryRun = true
-			if err := runApps(apps...); err != nil {
-				Logger.Println(err)
-				return false
-			}
+	case Stop:
+		if h.LeigodStatus != Stop {
+			h.tm.Reset(2 * time.Minute)
 		}
-		time.Sleep(time.Second)
 	}
 }
 
-func check(ctx context.Context, exitCh chan string) {
+func (h Helper) loop(ctx context.Context, exitCh chan string) {
 	defer func() {
 		if r := recover(); r != nil {
 			exitCh <- fmt.Sprintf("系统错误，关闭助手\n err: %+v", recover())
 		}
 		Logger.Println("defer check")
 	}()
-	leigodExitTimes := 0
-	for {
+	tk := time.NewTimer(10 * time.Second)
+	defer tk.Stop()
 
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		default:
-		}
-		leigodOK, gameOK := hasGameRunning()
-		if !leigodOK {
-			if leigodExitTimes > 5 { // 连续监测5次再退出
-				exitCh <- "雷神加速器已退出" // 加速器退出时 助手也退出
-			}
-			leigodExitTimes++
-		} else {
-			leigodExitTimes = 0
-		}
-
-		if gameOK { // 启动游戏时 重置检测状态
-			lastTryPauseTime = -1
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		if !gameOK && time.Now().Unix()-lastTryPauseTime > 60*60 { // 如果近期检测过 不再频繁检测
-			Logger.Printf("lastTryPauseTime:%d\n", lastTryPauseTime)
-			if err := tryPauseLeigod(); err != nil {
-				Notify("尝试暂停失败：" + err.Error())
+		case <-tk.C:
+			_, gameOK := hasGameRunning("leigod", h.games)
+			if gameOK { // 启动游戏时 重置检测状态
+				h.Update(Running)
+			} else {
+				h.Update(Stop)
 			}
 		}
-		time.Sleep(2 * time.Second)
 	}
 }
 
 // 检测游戏是否运行中
-func hasGameRunning() (leigodOK, gameOK bool) {
+func hasGameRunning(name string, games map[string]bool) (leigodOK, gameOK bool) {
 	var ps = getProcess()
-	if _, leigodOK = ps["leigod"]; !leigodOK {
+	if _, leigodOK = ps[name]; !leigodOK {
 		return
 	}
-	for k := range watchs {
+	for k := range games {
 		if _, ok := ps[k]; ok {
 			gameOK = true
 			break
@@ -149,36 +127,34 @@ func hasGameRunning() (leigodOK, gameOK bool) {
 	return
 }
 
-func tryPauseLeigod(finnal ...bool) error {
+func (h *Helper) Pause(finnal ...bool) error {
 	lastTryPauseTime = time.Now().Unix()
-	if !Token.IsValid() {
-
-	}
 	// 获取暂停状态
-	paused, err := IsPause(Token.AccountToken)
+	paused, err := h.api.IsPause()
 	if err == ErrorNotLogin {
-		if err := Relogin(); err != nil {
+		if err := h.Relogin(); err != nil {
 			return err
 		}
 		if len(finnal) > 0 {
 			return nil
 		}
-		return tryPauseLeigod(true)
+		return h.Pause(true)
 	} else {
 		if err != nil {
 			return err
 		}
 	}
 	if !paused {
-		err := Pause(Token.AccountToken)
+		h.LeigodStatus = Running
+		err := h.api.Pause()
 		if err == ErrorNotLogin {
-			if err := Relogin(); err != nil {
+			if err := h.Relogin(); err != nil {
 				return err
 			}
 			if len(finnal) > 0 {
 				return nil
 			}
-			return tryPauseLeigod(true)
+			return h.Pause(true)
 		} else {
 			if err != nil {
 				return err
@@ -186,24 +162,18 @@ func tryPauseLeigod(finnal ...bool) error {
 		}
 
 		Notify("雷神加速器助手检测到当前没有游戏运行，已暂停时长。")
+		h.LeigodStatus = Stop
 		return nil
 	}
+	h.LeigodStatus = Stop
 	Logger.Println("已是暂停状态，无需暂停")
 	return nil
 }
 
-func Relogin() error {
-	token, expire, err := Login(config.Username, config.Password)
+func (h Helper) Relogin() error {
+	err := h.api.Login()
 	if err != nil {
 		return err
 	}
-	if token == "" || expire.Before(time.Now()) {
-		return fmt.Errorf("雷神账号登录失败")
-	}
-	Token = &LeigodToken{
-		AccountToken: token,
-		ExpireTime:   expire,
-	}
-	SaveToken()
 	return nil
 }
