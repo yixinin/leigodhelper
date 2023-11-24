@@ -27,16 +27,6 @@ func main() {
 		WorkingDirectory: `C:\Program Files\LeigodHelper`,
 	}
 
-	c, err := helper.LoadConfig(`C:\Program Files\LeigodHelper\config.toml`)
-	if err != nil {
-		helper.Notify(err.Error())
-		return
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	var h = helper.NewHelper(c)
-	h.Run(ctx)
-
 	prg := &program{}
 	s, err := service.New(prg, svcConfig)
 	if err != nil {
@@ -65,11 +55,21 @@ func main() {
 
 // program implements svc.Service
 type program struct {
-	wg   sync.WaitGroup
-	quit chan struct{}
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+	quit   chan struct{}
 }
 
 func (p *program) Start(srv service.Service) error {
+	c, err := helper.LoadConfig(`C:\Program Files\LeigodHelper\config.toml`)
+	if err != nil {
+		helper.Notify(err.Error())
+		return nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	p.cancel = cancel
+	var h = helper.NewHelper(c)
+	go h.Run(ctx)
 	// The Start method must not block, or Windows may assume your service failed
 	// to start. Launch a Goroutine here to do something interesting/blocking.
 
@@ -90,7 +90,9 @@ func (p *program) Stop(srv service.Service) error {
 	// The Stop method is invoked by stopping the Windows service, or by pressing Ctrl+C on the console.
 	// This method may block, but it's a good idea to finish quickly or your process may be killed by
 	// Windows during a shutdown/reboot. As a general rule you shouldn't rely on graceful shutdown.
-
+	if p.cancel != nil {
+		p.cancel()
+	}
 	log.Println("Stopping...")
 	close(p.quit)
 	p.wg.Wait()

@@ -5,6 +5,7 @@ import (
 )
 
 func Notify(msg string) {
+	Logger.Println(msg)
 	notification := toast.Notification{
 		AppID:   "Microsoft.Windows.Shell.RunDialog",
 		Title:   "加速器助手",

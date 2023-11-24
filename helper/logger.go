@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -12,15 +13,16 @@ import (
 var Logger *Log
 
 func init() {
-	cmd := exec.Command("powershell", "rm", "logs/leigodhelper.log.*")
+	var dir = `C:\Program Files\LeigodHelper`
+	cmd := exec.Command("powershell", "rm", filepath.Join(dir, "logs/leigodhelper.log.*"))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := cmd.Run()
 	if err != nil {
 		log.Println(err)
 	}
-	os.Rename("logs/leigodhelper.log", fmt.Sprintf("logs/leigodhelper.log.%s", time.Now().Format("0102150405")))
-	os.Mkdir("logs", os.ModeDir)
-	f, err := os.Create("logs/leigodhelper.log")
+	os.Rename(filepath.Join(dir, "logs/leigodhelper.log"), fmt.Sprintf(filepath.Join(dir, "logs/leigodhelper.log.%s"), time.Now().Format("0102150405")))
+	os.Mkdir(filepath.Join(dir, "logs"), os.ModeDir)
+	f, err := os.Create(filepath.Join(dir, "logs/leigodhelper.log"))
 	if err != nil {
 		log.Println(err)
 		return

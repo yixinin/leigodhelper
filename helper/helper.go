@@ -19,12 +19,14 @@ type Helper struct {
 	GameStatus   Status
 	LeigodStatus Status
 
-	tm *time.Timer
+	tm    *time.Timer
+	tmSet bool
 }
 
 type Status string
 
 const (
+	Unknown Status = ""
 	Stop    Status = "stop"
 	Running Status = "running"
 )
@@ -48,7 +50,7 @@ func NewHelper(c *Config) Helper {
 	return h
 }
 
-func (h Helper) Run(ctx context.Context) {
+func (h *Helper) Run(ctx context.Context) {
 	var exitCh = make(chan string)
 	Logger.Println("start check")
 	go h.loop(ctx, exitCh)
@@ -65,36 +67,45 @@ func (h Helper) Run(ctx context.Context) {
 			return
 		case <-h.tm.C:
 			h.Pause()
+			h.tmSet = false
 		}
 	}
 }
 
-func (h *Helper) Update(status Status) {
-	if h.GameStatus == status {
-		return
-	}
-	h.GameStatus = status
-	switch status {
-	case Running:
-		if h.LeigodStatus == Stop {
+func (h *Helper) Update(leigodOK, gameOK bool) {
+	h.GameStatus = Stop
+	if gameOK {
+		h.GameStatus = Running
+		if h.tmSet {
+			Logger.Println("game running, pause canced!")
 			h.tm.Stop()
+			h.tmSet = false
+			return
 		}
-
-	case Stop:
-		if h.LeigodStatus != Stop {
-			h.tm.Reset(2 * time.Minute)
+	}
+	switch h.LeigodStatus {
+	case Running, Unknown:
+		if !leigodOK || !gameOK {
+			if !h.tmSet {
+				Logger.Println("will pause 3 minute later...")
+				if h.LeigodStatus == Running {
+					Notify("雷神加速器助手检测到当前没有游戏运行，3分钟后停时长。")
+				}
+				h.tm.Reset(3 * time.Minute)
+				h.tmSet = true
+			}
 		}
 	}
 }
 
-func (h Helper) loop(ctx context.Context, exitCh chan string) {
+func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 	defer func() {
 		if r := recover(); r != nil {
 			exitCh <- fmt.Sprintf("系统错误，关闭助手\n err: %+v", recover())
 		}
 		Logger.Println("defer check")
 	}()
-	tk := time.NewTimer(10 * time.Second)
+	tk := time.NewTicker(10 * time.Second)
 	defer tk.Stop()
 
 	for {
@@ -102,12 +113,8 @@ func (h Helper) loop(ctx context.Context, exitCh chan string) {
 		case <-ctx.Done():
 			return
 		case <-tk.C:
-			_, gameOK := hasGameRunning("leigod", h.games)
-			if gameOK { // 启动游戏时 重置检测状态
-				h.Update(Running)
-			} else {
-				h.Update(Stop)
-			}
+			leigodOk, gameOK := hasGameRunning("leigod", h.games)
+			h.Update(leigodOk, gameOK)
 		}
 	}
 }
@@ -170,7 +177,7 @@ func (h *Helper) Pause(finnal ...bool) error {
 	return nil
 }
 
-func (h Helper) Relogin() error {
+func (h *Helper) Relogin() error {
 	err := h.api.Login()
 	if err != nil {
 		return err

@@ -50,5 +50,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	// }
 
 	config.Games = strings.ReplaceAll(config.Games, "，", ",")
+	Logger.Println("start watch games:", config.Games)
 	return &config, nil
 }

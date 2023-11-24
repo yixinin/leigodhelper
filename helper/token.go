@@ -16,7 +16,7 @@ var Token *LeigodToken
 
 var filename = "cache/token.cache"
 
-func (a LeigodApi) SaveToken() {
+func (a *LeigodApi) SaveToken() {
 	buf, err := json.Marshal(a.Token)
 	if err != nil {
 		Logger.Println(err)
@@ -29,7 +29,7 @@ func (a LeigodApi) SaveToken() {
 	}
 }
 
-func (a LeigodApi) LoadToken() {
+func (a *LeigodApi) LoadToken() {
 	buf, _ := os.ReadFile(filename)
 	json.Unmarshal(buf, &a.Token)
 }
