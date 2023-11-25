@@ -14,11 +14,11 @@ import (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			var msg = fmt.Sprintf("雷神加速器助手异常退出\nerror: %+v", r)
+			var msg = fmt.Sprintf("leigod helper exited with error:\nerror: %+v", r)
 			helper.Notify(msg)
 			helper.Logger.Println(msg)
+			return
 		}
-		helper.Logger.Println("助手已正常关闭")
 	}()
 	svcConfig := &service.Config{
 		Name:             "LeigodHelper",
@@ -36,13 +36,13 @@ func main() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "install" {
 			s.Install()
-			log.Println("服务安装成功")
+			log.Println("Install service success!")
 			return
 		}
 
 		if os.Args[1] == "remove" {
 			s.Uninstall()
-			log.Println("服务卸载成功")
+			log.Println("Remove service success!")
 			return
 		}
 	}
@@ -57,7 +57,6 @@ func main() {
 type program struct {
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
-	quit   chan struct{}
 }
 
 func (p *program) Start(srv service.Service) error {
@@ -69,20 +68,12 @@ func (p *program) Start(srv service.Service) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 	var h = helper.NewHelper(c)
-	go h.Run(ctx)
-	// The Start method must not block, or Windows may assume your service failed
-	// to start. Launch a Goroutine here to do something interesting/blocking.
-
-	p.quit = make(chan struct{})
-
 	p.wg.Add(1)
 	go func() {
-		log.Println("Starting...")
-		<-p.quit
-		log.Println("Quit signal received...")
+		h.Run(ctx)
 		p.wg.Done()
 	}()
-
+	helper.Logger.Println("Starting...")
 	return nil
 }
 
@@ -93,9 +84,8 @@ func (p *program) Stop(srv service.Service) error {
 	if p.cancel != nil {
 		p.cancel()
 	}
-	log.Println("Stopping...")
-	close(p.quit)
+	helper.Logger.Println("Waiting graceful stop...")
 	p.wg.Wait()
-	log.Println("Stopped.")
+	helper.Logger.Println("Stopped")
 	return nil
 }

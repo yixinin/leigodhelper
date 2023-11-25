@@ -54,15 +54,14 @@ func (h *Helper) Run(ctx context.Context) {
 	var exitCh = make(chan string)
 	Logger.Println("start check")
 	go h.loop(ctx, exitCh)
-
 	for {
 		select {
 		case <-ctx.Done():
+			Logger.Printf("recv exit signal, try pause")
 			h.Pause()
-			Logger.Printf("加速器助手已被强制退出")
 			return
 		case msg := <-exitCh:
-			Logger.Printf("加速器助手已退出, msg: %s", msg)
+			Logger.Printf("check paniced, try pause", msg)
 			h.Pause()
 			return
 		case <-h.tm.C:
@@ -83,13 +82,22 @@ func (h *Helper) Update(leigodOK, gameOK bool) {
 			return
 		}
 	}
-	switch h.LeigodStatus {
-	case Running, Unknown:
-		if !leigodOK || !gameOK {
-			if !h.tmSet {
+	if leigodOK {
+		if !gameOK && !h.tmSet {
+			Logger.Println("will pause 3 minute later...")
+			if h.LeigodStatus == Running {
+				Notify("no game running, will pause 3 minutes later.")
+			}
+			h.tm.Reset(3 * time.Minute)
+			h.tmSet = true
+		}
+		return
+	} else {
+		if h.LeigodStatus == Running {
+			if !gameOK && !h.tmSet {
 				Logger.Println("will pause 3 minute later...")
 				if h.LeigodStatus == Running {
-					Notify("雷神加速器助手检测到当前没有游戏运行，3分钟后停时长。")
+					Notify("no game running, will pause 3 minutes later.")
 				}
 				h.tm.Reset(3 * time.Minute)
 				h.tmSet = true
@@ -101,12 +109,14 @@ func (h *Helper) Update(leigodOK, gameOK bool) {
 func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 	defer func() {
 		if r := recover(); r != nil {
-			exitCh <- fmt.Sprintf("系统错误，关闭助手\n err: %+v", recover())
+			exitCh <- fmt.Sprintf("paniced ! \n err: %+v", recover())
 		}
-		Logger.Println("defer check")
 	}()
 	tk := time.NewTicker(10 * time.Second)
 	defer tk.Stop()
+
+	ttk := time.NewTicker(time.Hour)
+	defer ttk.Stop()
 
 	for {
 		select {
@@ -115,6 +125,12 @@ func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 		case <-tk.C:
 			leigodOk, gameOK := hasGameRunning("leigod", h.games)
 			h.Update(leigodOk, gameOK)
+		case <-ttk.C:
+			// force check
+			_, gameOK := hasGameRunning("leigod", h.games)
+			if !gameOK {
+				h.Pause()
+			}
 		}
 	}
 }
@@ -168,12 +184,12 @@ func (h *Helper) Pause(finnal ...bool) error {
 			}
 		}
 
-		Notify("雷神加速器助手检测到当前没有游戏运行，已暂停时长。")
+		Notify("no game running, stop timing.")
 		h.LeigodStatus = Stop
 		return nil
 	}
 	h.LeigodStatus = Stop
-	Logger.Println("已是暂停状态，无需暂停")
+	Logger.Println("already paused!, nothing todo.")
 	return nil
 }
 
