@@ -34,7 +34,8 @@ const (
 func NewHelper(c *Config) Helper {
 	var games = make(map[string]bool)
 	for _, v := range strings.Split(c.Games, ",") {
-		games[strings.TrimSpace(v)] = true
+		name := NormalizeProcessName(strings.TrimSpace(v))
+		games[name] = true
 	}
 
 	h := Helper{
@@ -84,22 +85,22 @@ func (h *Helper) Update(leigodOK, gameOK bool) {
 	}
 	if leigodOK {
 		if !gameOK && !h.tmSet {
-			Logger.Println("will pause 3 minute later...")
+			Logger.Println("will pause 10minute later...")
 			if h.LeigodStatus == Running {
-				Notify("no game running, will pause 3 minutes later.")
+				Notify("no game running, will pause 10minutes later.")
 			}
-			h.tm.Reset(3 * time.Minute)
+			h.tm.Reset(10 * time.Minute)
 			h.tmSet = true
 		}
 		return
 	} else {
 		if h.LeigodStatus == Running {
 			if !gameOK && !h.tmSet {
-				Logger.Println("will pause 3 minute later...")
+				Logger.Println("will pause 10minute later...")
 				if h.LeigodStatus == Running {
-					Notify("no game running, will pause 3 minutes later.")
+					Notify("no game running, will pause 10minutes later.")
 				}
-				h.tm.Reset(3 * time.Minute)
+				h.tm.Reset(10 * time.Minute)
 				h.tmSet = true
 			}
 		}

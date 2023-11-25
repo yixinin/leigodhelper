@@ -42,11 +42,33 @@ func getProcess() (m map[string]byte) {
 			v := strings.TrimSpace(string(proc.szExeFile[0:]))
 			var i = strings.Index(v, ".exe")
 			if i > 0 {
-				m[v[:i]]++
+				name := v[:i]
+				name = NormalizeProcessName(name)
+				m[name]++
 			}
 		} else {
 			break
 		}
 	}
 	return m
+}
+
+func NormalizeProcessName(src string) string {
+	var dst = make([]byte, 0, len(src))
+	for _, b := range []byte(src) {
+		if isLetter(b) || b == '_' {
+			dst = append(dst, b)
+		}
+	}
+	return string(dst)
+}
+
+func isLetter(b byte) bool {
+	if b >= 'a' && b <= 'z' {
+		return true
+	}
+	if b >= 'A' && b <= 'Z' {
+		return true
+	}
+	return false
 }
