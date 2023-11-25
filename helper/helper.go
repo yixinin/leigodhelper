@@ -12,9 +12,8 @@ var (
 )
 
 type Helper struct {
-	api     LeigodApi
-	games   map[string]bool
-	timeout time.Duration
+	api   LeigodApi
+	games map[string]bool
 
 	GameStatus   Status
 	LeigodStatus Status
@@ -43,9 +42,8 @@ func NewHelper(c *Config) Helper {
 			username: c.Username,
 			password: c.Password,
 		},
-		games:   games,
-		timeout: time.Duration(c.Timeout) * time.Second,
-		tm:      time.NewTimer(time.Second),
+		games: games,
+		tm:    time.NewTimer(time.Second),
 	}
 	h.tm.Stop()
 	return h

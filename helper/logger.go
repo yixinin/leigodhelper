@@ -22,7 +22,7 @@ func init() {
 	}
 	os.Rename(filepath.Join(dir, "logs/leigodhelper.log"), fmt.Sprintf(filepath.Join(dir, "logs/leigodhelper.log.%s"), time.Now().Format("0102150405")))
 	os.Mkdir(filepath.Join(dir, "logs"), os.ModeDir)
-	f, err := os.Create(filepath.Join(dir, "logs/leigodhelper.log"))
+	f, err := os.OpenFile(filepath.Join(dir, "logs/leigodhelper.log"), os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		log.Println(err)
 		return

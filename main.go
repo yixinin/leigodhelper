@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"leigodhelper/helper"
 	"log"
 	"os"
+	"os/exec"
 	"sync"
 
 	"github.com/kardianos/service"
 )
+
+const InstallPath = `C:\Program Files\LeigodHelper`
 
 func main() {
 	defer func() {
@@ -35,13 +39,39 @@ func main() {
 	}
 	if len(os.Args) > 1 {
 		if os.Args[1] == "install" {
+			os.MkdirAll(InstallPath, 0644)
+			src, err := os.Open(os.Args[0])
+			if err != nil {
+				panic(err)
+			}
+			dst, err := os.Create(InstallPath + "/leigodhelper.exe")
+			if err != nil {
+				panic(err)
+			}
+			_, err = io.Copy(dst, src)
+			if err != nil {
+				panic(err)
+			}
+			// start service
 			s.Install()
 			log.Println("Install service success!")
+			err = exec.Command("net", "start", "LeigodHelper").Run()
+			if err != nil {
+				log.Println("start service error: ", err)
+			}
 			return
 		}
 
 		if os.Args[1] == "remove" {
 			s.Uninstall()
+			err := os.RemoveAll(InstallPath)
+			if err != nil {
+				log.Println("remove files error: ", err)
+			}
+			err = exec.Command("net", "stop", "LeigodHelper").Run()
+			if err != nil {
+				log.Println("stop service error: ", err)
+			}
 			log.Println("Remove service success!")
 			return
 		}

@@ -11,7 +11,6 @@ type Config struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	Games    string `mapstructure:"games"`
-	Timeout  int    `mapstructure:"timeout"`
 }
 
 var config Config
