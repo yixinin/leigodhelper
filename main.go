@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -41,18 +42,37 @@ func main() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "install" {
 			os.MkdirAll(InstallPath+"/log", 0644)
-			src, err := os.Open(os.Args[0])
-			if err != nil {
-				panic(err)
+			{
+				src, err := os.Open(os.Args[0])
+				if err != nil {
+					panic(err)
+				}
+				defer src.Close()
+				dst, err := os.Create(InstallPath + "/leigodhelper.exe")
+				if err != nil {
+					panic(err)
+				}
+				_, err = io.Copy(dst, src)
+				if err != nil {
+					panic(err)
+				}
+				defer src.Close()
 			}
-			dst, err := os.Create(InstallPath + "/leigodhelper.exe")
-			if err != nil {
-				panic(err)
+			{
+				src, err := os.Open(filepath.Dir(os.Args[0]) + "/config.toml")
+				if err != nil {
+					panic(err)
+				}
+				dst, err := os.Create(InstallPath + "/config.toml")
+				if err != nil {
+					panic(err)
+				}
+				_, err = io.Copy(dst, src)
+				if err != nil {
+					panic(err)
+				}
 			}
-			_, err = io.Copy(dst, src)
-			if err != nil {
-				panic(err)
-			}
+
 			// start service
 			s.Install()
 			log.Println("Install service success!")

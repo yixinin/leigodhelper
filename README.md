@@ -26,9 +26,16 @@
 - 将雷神账号密码填写在username,password
 - 将需要监听的游戏进程名(不要.exe)填写在games, 以英文逗号分隔(默认监听pubg，盗贼之海。)
 #### 安装
-- 用管理员身份打开powershell/cmd
-- ./leigodhelper.exe install
+- 将config.toml 和 leigodhelper.exe 放置在目录leigodhelper
+- 编辑config.toml, 填入 username,password,games
+- 用管理员身份打开powershell/cmd 执行以下命令
+```
+cd leigodhelper
+./leigodhelper.exe install
+```
 - leigodhelper service会自动启动
+- 编辑config.toml会自动生效
+- 安装路径为C:\Program Files\LeigodHelper
 
 ### 卸载
 - 用管理员身份打开powershell/cmd

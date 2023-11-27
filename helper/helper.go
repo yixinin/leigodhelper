@@ -122,6 +122,41 @@ func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 		case <-ctx.Done():
 			return
 		case <-tk.C:
+			c, _ := LoadConfig(`C:\Program Files\LeigodHelper\config.toml`)
+			if c != nil {
+				var games = make(map[string]bool)
+				var adds = make([]string, 0)
+				var dels = make([]string, 0)
+				for _, v := range strings.Split(c.Games, ",") {
+					name := NormalizeProcessName(strings.TrimSpace(v))
+					games[name] = true
+
+					if _, ok := h.games[name]; !ok {
+						adds = append(adds, name)
+					}
+				}
+				for k := range h.games {
+					if _, ok := games[k]; !ok {
+						dels = append(dels, k)
+					}
+				}
+				if len(adds) != 0 {
+					Logger.Println("add wathcing games:%v", dels)
+				}
+				if len(dels) != 0 {
+					Logger.Println("del wathcing games:%v", dels)
+				}
+				if c.Password != "" {
+					Logger.Println("update password")
+					h.api.password = c.Password
+				}
+				if c.Username != "" {
+					Logger.Println("update form", h.api.username, " username to", c.Username)
+					h.api.username = c.Username
+				}
+
+				h.games = games
+			}
 			leigodOk, gameOK := hasGameRunning("leigod", h.games)
 			h.Update(leigodOk, gameOK)
 		case <-ttk.C:
