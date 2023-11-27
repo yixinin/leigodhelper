@@ -41,7 +41,7 @@ func main() {
 	}
 	if len(os.Args) > 1 {
 		if os.Args[1] == "install" {
-			os.MkdirAll(InstallPath+"/log", 0644)
+			os.MkdirAll(InstallPath, 0644)
 			{
 				src, err := os.Open(os.Args[0])
 				if err != nil {
@@ -117,6 +117,7 @@ func (p *program) Start(srv service.Service) error {
 		helper.Notify(err.Error())
 		return nil
 	}
+	helper.InitLogger()
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
 	var h = helper.NewHelper(c)

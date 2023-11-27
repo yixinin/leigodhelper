@@ -51,7 +51,7 @@ func NewHelper(c *Config) Helper {
 
 func (h *Helper) Run(ctx context.Context) {
 	var exitCh = make(chan string)
-	Logger.Println("start check")
+	Logger.Println("start watch games:", config.Games)
 	go h.loop(ctx, exitCh)
 	for {
 		select {
@@ -141,17 +141,17 @@ func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 					}
 				}
 				if len(adds) != 0 {
-					Logger.Println("add wathcing games:%v", dels)
+					Logger.Println("add wathcing games:", dels)
 				}
 				if len(dels) != 0 {
-					Logger.Println("del wathcing games:%v", dels)
+					Logger.Println("del wathcing games:", dels)
 				}
 				if c.Password != "" {
 					Logger.Println("update password")
 					h.api.password = c.Password
 				}
 				if c.Username != "" {
-					Logger.Println("update form", h.api.username, " username to", c.Username)
+					Logger.Println("update username to", c.Username)
 					h.api.username = c.Username
 				}
 

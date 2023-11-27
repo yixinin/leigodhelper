@@ -12,7 +12,7 @@ import (
 
 var Logger *Log
 
-func init() {
+func InitLogger() {
 	var dir = `C:\Program Files\LeigodHelper`
 	cmd := exec.Command("powershell", "rm", filepath.Join(dir, "logs/leigodhelper.log.*"))
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
