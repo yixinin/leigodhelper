@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/kardianos/service"
 )
@@ -39,7 +40,7 @@ func main() {
 	}
 	if len(os.Args) > 1 {
 		if os.Args[1] == "install" {
-			os.MkdirAll(InstallPath, 0644)
+			os.MkdirAll(InstallPath+"/log", 0644)
 			src, err := os.Open(os.Args[0])
 			if err != nil {
 				panic(err)
@@ -63,14 +64,15 @@ func main() {
 		}
 
 		if os.Args[1] == "remove" {
-			s.Uninstall()
-			err := os.RemoveAll(InstallPath)
-			if err != nil {
-				log.Println("remove files error: ", err)
-			}
 			err = exec.Command("net", "stop", "LeigodHelper").Run()
 			if err != nil {
 				log.Println("stop service error: ", err)
+			}
+			s.Uninstall()
+			time.Sleep(time.Second)
+			err := os.RemoveAll(InstallPath)
+			if err != nil {
+				log.Println("remove files error: ", err)
 			}
 			log.Println("Remove service success!")
 			return
@@ -117,5 +119,6 @@ func (p *program) Stop(srv service.Service) error {
 	helper.Logger.Println("Waiting graceful stop...")
 	p.wg.Wait()
 	helper.Logger.Println("Stopped")
+	helper.Logger.Close()
 	return nil
 }
