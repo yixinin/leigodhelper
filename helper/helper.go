@@ -146,11 +146,11 @@ func (h *Helper) loop(ctx context.Context, exitCh chan string) {
 				if len(dels) != 0 {
 					Logger.Println("del wathcing games:", dels)
 				}
-				if c.Password != "" {
+				if c.Password != "" && c.Password != h.api.password {
 					Logger.Println("update password")
 					h.api.password = c.Password
 				}
-				if c.Username != "" {
+				if c.Username != "" && c.Username != h.api.username {
 					Logger.Println("update username to", c.Username)
 					h.api.username = c.Username
 				}
